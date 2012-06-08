@@ -1,8 +1,12 @@
 #!/usr/bin/perl
-qwerty
 #===============================================
 # But : link netflows datas and IPS datas
 #==============================================
+
+# Parameters :
+# ./getResponsibleFlow fromDate toDate
+# date format : YYYY:MM:DD:hh:mm:ss
+#
 
 use strict;
 use warnings;
@@ -16,9 +20,13 @@ my $bdd_server   = 'localhost';
 my $bdd_name     = 'ips';
 my $bdd_user     = 'root';
 my $bdd_password = 'caca';
+
 ## Files and directories
 my $current_dir = `pwd`; chomp($current_dir);
 my $bad_ips_file = "$current_dir/bad_ips";
+my $flow_record_dir = "$current_dir/nfdumprecord";
+my $result_dir = "$current_dir/result"
+
 ## Return script values
 my $error_file_not_regular  = 10;
 my $error_file_not_writable = 11;
@@ -27,7 +35,7 @@ my $error_dir_not_writable  = 12;
 # file verifications
 if (-e $bad_ips_file) {
     if (!(-f $bad_ips_file)) {
-        print "The file is a regular file (should not be a symbolic link, a socket, ...).\n";
+        print "The file isn't a regular file (should not be a symbolic link, a socket, ...).\n";
         exit($error_file_not_regular);
     } elsif (!(-w $bad_ips_file)) {
         print "The file is not writable.\n";
@@ -50,6 +58,41 @@ write_bad_ips($bad_ips_file, @bad_ips);
 
 # disconnecting from the database
 $dbh->disconnect();
+
+# Calculate time of beginning (timeDebCom) for nfdump command (-R)
+my $fromDate = $ARGV[0];
+chomp($fromDate);
+my ($yearDeb, $monDeb, $dayDeb, $hourDeb, $minDeb, $secDeb) = split /[\/ .:]/, $fromDate;
+$yearDeb -= 1900;
+$monDeb -= 1;
+$timeDebSeconde = mktime($secDeb,$minDeb,$hourDeb,$dayDeb,$monDeb,$yearDeb);
+$minDeb = $minDeb - ($minDeb % 5);
+my $timeDebCom = strftime("%Y%m%d%H%M",$secDeb,$minDeb,$hourDeb,$mdayDeb,$monDeb,$yearDeb);
+
+
+# Calculate time of end (timeEndCom) for nfdump command (-R)
+my $toDate = $ARGV[1];
+chomp($toDate);
+my ($yearEnd, $monEnd, $dayEnd, $hourEnd, $minEnd, $secEnd) = split /[\/ . :]/, $toDate;
+$yearEnd -= 1900;
+$monEnd -= 1;
+my $timeEndSeconde = mktime($secEnd,$minEnd,$hourEnd,$dayEnd,$monEnd,$yearEnd);
+$minEnd = $minEnd + ($minEnd % 5);
+my $timeEndCom = strftime("%Y%m%d%H%M",$secEnd,$minEnd,$hourEnd,$mdayEnd,$monEnd,$yearEnd);
+
+
+
+# Main loop : For each IP in Blacklist
+open (BLACKLIST,$blPath) or die ("Can't open ".$blPath);
+while($attIp = <BLACKLIST>) { 
+
+	# Get the flow to analyze 
+	@flowsToAnalyze = `nfdump -q -R nfcapd.$timeDebCom:nfcapd.$timeEndCom -M $flow_record_dir -t $timeDebWindow-$timeEndWindow 
+	"dst ip $attIp" -o 'fmt:%td|%sp|%dp|%pkt|%byt'`;
+
+	#TODO : Print result in a file
+}
+close BLACKLIST or die $!;
 
 #
 # Put every destination ip into a file
