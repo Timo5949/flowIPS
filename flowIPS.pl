@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+
 #===============================================
 # But : link netflows datas and IPS datas
 #==============================================
@@ -16,14 +17,11 @@ use DBI;
 # Configuration parameters
 #
 ## Database connexion parameter
-my $bdd_server   = 'localhost';
-my $bdd_name     = 'ips';
-my $bdd_user     = 'root';
-my $bdd_password = 'caca';
-
+require './bdd_parameters.pl';
+our %params_bdd;
 ## Files and directories
 my $current_dir = `pwd`; chomp($current_dir);
-my $bad_ips_file = "$current_dir/bad_ips";
+my $bad_ips_file = "$current_dir/results/bad_ips";
 my $flow_record_dir = "$current_dir/nfdumprecord";
 my $result_dir = "$current_dir/result"
 
@@ -49,7 +47,7 @@ if (-e $bad_ips_file) {
 }
 
 # Connection to the database
-my $dbh = DBI->connect("dbi:mysql:dbname=$bdd_name;host=$bdd_server;", $bdd_user, $bdd_password)
+my $dbh = DBI->connect("dbi:mysql:dbname=$params_bdd{'name'};host=$params_bdd{'server'};", $params_bdd{'user'}, $params_bdd{'password'})
 	or die $DBI::errstr; 
 	
 # Processing
